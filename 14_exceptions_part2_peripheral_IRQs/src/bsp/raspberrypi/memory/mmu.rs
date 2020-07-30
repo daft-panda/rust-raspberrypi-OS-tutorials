@@ -12,7 +12,7 @@ use core::ops::RangeInclusive;
 // Public Definitions
 //--------------------------------------------------------------------------------------------------
 
-const NUM_MEM_RANGES: usize = 2;
+const NUM_MEM_RANGES: usize = 3;
 
 /// The virtual memory layout.
 ///
@@ -52,6 +52,21 @@ pub static LAYOUT: KernelVirtualLayout<{ NUM_MEM_RANGES }> = KernelVirtualLayout
                 mem_attributes: MemAttributes::CacheableDRAM,
                 acc_perms: AccessPermissions::ReadOnly,
                 execute_never: false,
+            },
+        },
+        RangeDescriptor {
+            name: "DMA Memory",
+            virtual_range: || {
+                RangeInclusive::new(
+                    memory_map::mmio::DMA_HEAP_START,
+                    memory_map::mmio::DMA_HEAP_END_INCLUSIVE,
+                )
+            },
+            translation: Translation::Identity,
+            attribute_fields: AttributeFields {
+                mem_attributes: MemAttributes::NonCacheableDRAM,
+                acc_perms: AccessPermissions::ReadWrite,
+                execute_never: true,
             },
         },
         RangeDescriptor {

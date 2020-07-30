@@ -51,7 +51,8 @@ endif
 QEMU_MISSING_STRING = "This board is not yet supported for QEMU."
 
 RUSTFLAGS          = -C link-arg=-T$(LINKER_FILE) $(RUSTC_MISC_ARGS)
-RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
+RUSTFLAGS_PEDANTIC = $(RUSTFLAGS)
+#RUSTFLAGS_PEDANTIC = $(RUSTFLAGS) -D warnings -D missing_docs
 
 FEATURES      = bsp_$(BSP)
 COMPILER_ARGS = --target=$(TARGET) \
@@ -104,7 +105,7 @@ $(KERNEL_ELF):
 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(RUSTC_CMD)
 
 $(KERNEL_BIN): $(KERNEL_ELF)
-	@$(OBJCOPY_CMD) $(KERNEL_ELF) $(KERNEL_BIN)
+	$(OBJCOPY_CMD) $(KERNEL_ELF) $(KERNEL_BIN)
 
 doc:
 	$(DOC_CMD) --document-private-items --open
@@ -114,7 +115,7 @@ qemu test:
 	@echo $(QEMU_MISSING_STRING)
 else
 qemu: $(KERNEL_BIN)
-	@$(DOCKER_QEMU) $(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
+	$(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -kernel $(KERNEL_BIN)
 
 define KERNEL_TEST_RUNNER
     #!/usr/bin/env bash
@@ -132,6 +133,18 @@ test:
 	RUSTFLAGS="$(RUSTFLAGS_PEDANTIC)" $(TEST_CMD) $(TEST_ARG)
 endif
 
+qemu-debug: FEATURES += --features qemu-quirks
+qemu-debug:
+	killall gdbgui || true
+	RUSTFLAGS="$(RUSTFLAGS) -C debuginfo=2" $(RUSTC_CMD)
+	$(OBJCOPY_CMD) $(KERNEL_ELF) $(KERNEL_BIN)
+	#gdbgui -g gdb-multiarch --gdb-args="-q $(KERNEL_ELF)" &
+	# -s start gdb stub on :1234, -S stop at first instruction
+	$(EXEC_QEMU) $(QEMU_RELEASE_ARGS) -s -kernel $(KERNEL_BIN)
+
+.INTERMEDIATE:
+	kill $!
+
 chainboot: $(KERNEL_BIN)
 	@$(DOCKER_CHAINBOOT) $(EXEC_MINIPUSH) $(DEV_SERIAL) $(KERNEL_BIN)
 
@@ -143,7 +156,7 @@ openocd:
 
 define gen_gdb
     RUSTFLAGS="$(RUSTFLAGS_PEDANTIC) $1" $(RUSTC_CMD)
-    @$(DOCKER_GDB) gdb-multiarch -q $(KERNEL_ELF)
+    @gdb-multiarch -q $(KERNEL_ELF)
 endef
 
 gdb:

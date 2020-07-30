@@ -10,8 +10,28 @@
 #![feature(format_args_nl)]
 #![no_main]
 #![no_std]
+#![feature(alloc_error_handler)]
+#![feature(llvm_asm)]
 
-use libkernel::{bsp, cpu, driver, exception, info, memory, state, time, warn};
+extern crate alloc;
+
+use core::borrow::BorrowMut;
+use libkernel::{
+    bsp,
+    bsp::device_driver::{
+        Mailbox, Message, PropertyTag, PropertyTagPowerState, PropertyTagTemperature,
+    },
+    cpu, driver, exception, info, memory, state, time, warn,
+};
+use linked_list_allocator::LockedHeap;
+
+#[global_allocator]
+static GLOBAL_ALLOCATOR: LockedHeap = LockedHeap::empty();
+
+#[alloc_error_handler]
+fn foo(_: core::alloc::Layout) -> ! {
+    panic!("TITSUP")
+}
 
 /// Early init code.
 ///
@@ -33,6 +53,8 @@ unsafe fn kernel_init() -> ! {
     if let Err(string) = memory::mmu::mmu().init() {
         panic!("MMU: {}", string);
     }
+
+    GLOBAL_ALLOCATOR.lock().init(0x0020_0000, 4 * 1024 * 1024);
 
     for i in bsp::driver::driver_manager().all_device_drivers().iter() {
         if i.init().is_err() {
@@ -60,7 +82,7 @@ unsafe fn kernel_init() -> ! {
 }
 
 /// The main function running after the early init.
-fn kernel_main() -> ! {
+unsafe fn kernel_main() -> ! {
     use driver::interface::DriverManager;
     use exception::asynchronous::interface::IRQManager;
 
@@ -91,6 +113,22 @@ fn kernel_main() -> ! {
 
     info!("Registered IRQ handlers:");
     bsp::exception::asynchronous::irq_manager().print_handler();
+
+    let tmb = &mut PropertyTagTemperature {
+        temperature_id: PropertyTagTemperature::TEMPERATURE_ID,
+        value: 0,
+    };
+    let mut tag = PropertyTag::new(0x00030006, tmb);
+    let mut temp = Message::new(tag.borrow_mut());
+
+    match bsp::MAILBOX.send(Mailbox::BCM_MAILBOX_PROP_CHANNEL, &mut temp) {
+        Ok(tres) => {
+            info!("Temp is {:.2} C", tres.value / 1000);
+        }
+        _ => {}
+    }
+
+    info!("USB CORE {}", bsp::DWHCI);
 
     info!("Echoing input now");
     cpu::wait_forever();

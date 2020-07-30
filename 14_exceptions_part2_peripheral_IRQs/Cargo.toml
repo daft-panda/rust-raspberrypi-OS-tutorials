@@ -12,6 +12,7 @@ bsp_rpi4 = ["cortex-a", "register"]
 
 [dependencies]
 qemu-exit = "0.1.x"
+linked_list_allocator = "0.8.4"
 test-types = { path = "test-types" }
 
 # Optional dependencies

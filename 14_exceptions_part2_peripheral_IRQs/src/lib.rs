@@ -124,12 +124,18 @@
 #![feature(panic_info_message)]
 #![feature(slice_ptr_range)]
 #![feature(trait_alias)]
+#![feature(const_raw_ptr_to_usize_cast)]
 #![no_std]
 // Testing
 #![cfg_attr(test, no_main)]
 #![feature(custom_test_frameworks)]
+#![feature(llvm_asm)]
+#![feature(vec_into_raw_parts)]
 #![reexport_test_harness_main = "test_main"]
 #![test_runner(crate::test_runner)]
+
+#[macro_use]
+extern crate alloc;
 
 // `mod cpu` provides the `_start()` function, the first function to run. `_start()` then calls
 // `runtime_init()`, which jumps to `kernel_init()` (defined in `main.rs`).
@@ -147,6 +153,7 @@ pub mod memory;
 pub mod print;
 pub mod state;
 pub mod time;
+pub mod usb;
 
 //--------------------------------------------------------------------------------------------------
 // Testing

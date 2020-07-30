@@ -52,6 +52,7 @@ pub enum Translation {
 #[allow(missing_docs)]
 #[derive(Copy, Clone)]
 pub enum MemAttributes {
+    NonCacheableDRAM,
     CacheableDRAM,
     Device,
 }
@@ -129,6 +130,7 @@ impl fmt::Display for RangeDescriptor {
         };
 
         let attr = match self.attribute_fields.mem_attributes {
+            MemAttributes::NonCacheableDRAM => "NC",
             MemAttributes::CacheableDRAM => "C",
             MemAttributes::Device => "Dev",
         };

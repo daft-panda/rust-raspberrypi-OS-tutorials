@@ -137,7 +137,7 @@ class MiniPush
         end
     end
 
-    def connetion_reset
+    def connection_reset
         @target_serial&.close
         @target_serial = nil
         @host_console.cooked!
@@ -145,7 +145,7 @@ class MiniPush
 
     # When the serial lost power or was removed during R/W operation.
     def handle_reconnect
-        connetion_reset
+        connection_reset
 
         puts
         puts '[MP] ⚡ ' + 'Connection Error: Reinsert the USB serial again'.light_red
@@ -153,7 +153,7 @@ class MiniPush
 
     # When the serial is still powered.
     def handle_protocol_error
-        connetion_reset
+        connection_reset
 
         puts
         puts '[MP] ⚡ ' + 'Protocol Error: Remove and insert the USB serial again'.light_red
@@ -161,7 +161,7 @@ class MiniPush
     end
 
     def handle_unexpected(error)
-        connetion_reset
+        connection_reset
 
         puts
         puts '[MP] ⚡ ' + "Unexpected Error: #{error.inspect}".light_red
@@ -179,13 +179,13 @@ class MiniPush
     rescue ConnectionError, EOFError, Errno::EIO
         handle_reconnect
         retry
-    rescue ProtocolError, Timeout::Error
+    rescue ProtocolError, Timeout::Error => e
         handle_protocol_error
         retry
     rescue StandardError => e
         handle_unexpected(e)
     ensure
-        connetion_reset
+        connection_reset
         puts
         puts '[MP] Bye 👋'
     end

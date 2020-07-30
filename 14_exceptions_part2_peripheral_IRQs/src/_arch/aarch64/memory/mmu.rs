@@ -133,6 +133,7 @@ trait BaseAddr {
 mod mair {
     pub const DEVICE: u64 = 0;
     pub const NORMAL: u64 = 1;
+    pub const NORMAL_NON_CACHEABLE: u64 = 2;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -181,6 +182,10 @@ impl convert::From<AttributeFields>
     fn from(attribute_fields: AttributeFields) -> Self {
         // Memory attributes.
         let mut desc = match attribute_fields.mem_attributes {
+            MemAttributes::NonCacheableDRAM => {
+                STAGE1_PAGE_DESCRIPTOR::SH::InnerShareable
+                    + STAGE1_PAGE_DESCRIPTOR::AttrIndx.val(mair::NORMAL_NON_CACHEABLE)
+            }
             MemAttributes::CacheableDRAM => {
                 STAGE1_PAGE_DESCRIPTOR::SH::InnerShareable
                     + STAGE1_PAGE_DESCRIPTOR::AttrIndx.val(mair::NORMAL)
@@ -226,6 +231,10 @@ impl PageDescriptor {
 fn set_up_mair() {
     // Define the memory types being mapped.
     MAIR_EL1.write(
+        // Attribute 2 - Non-cacheable normal DRAM
+        MAIR_EL1::Attr2_Normal_Outer::NonCacheable +
+        MAIR_EL1::Attr2_Normal_Inner::NonCacheable +
+
         // Attribute 1 - Cacheable normal DRAM.
         MAIR_EL1::Attr1_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc +
         MAIR_EL1::Attr1_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc +

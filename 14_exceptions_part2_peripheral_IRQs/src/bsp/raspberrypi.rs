@@ -25,6 +25,16 @@ static PL011_UART: device_driver::PL011Uart = unsafe {
     )
 };
 
+pub static DWHCI: device_driver::DWHCI = unsafe {
+    device_driver::DWHCI::new(
+        memory::map::mmio::USB_BASE,
+        exception::asynchronous::irq_map::DWHCI,
+    )
+};
+
+pub static MAILBOX: device_driver::Mailbox =
+    unsafe { device_driver::Mailbox::new(memory::map::mmio::MAILBOX_BASE) };
+
 #[cfg(feature = "bsp_rpi3")]
 static INTERRUPT_CONTROLLER: device_driver::InterruptController = unsafe {
     device_driver::InterruptController::new(
