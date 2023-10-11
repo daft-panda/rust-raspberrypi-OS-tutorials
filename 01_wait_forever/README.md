@@ -2,8 +2,8 @@
 
 ## tl;dr
 
-The project skeleton is set up; A small piece of assembly code runs that just halts all CPU cores
-executing the kernel code.
+- The project skeleton is set up.
+- A small piece of assembly code runs that just halts all CPU cores executing the kernel code.
 
 ## Building
 
@@ -18,21 +18,22 @@ executing the kernel code.
 
 ## Code to look at
 
-- Custom `link.ld` linker script.
-    - Load address at `0x80_000`
+- `BSP`-specific `kernel.ld` linker script.
+    - Load address at `0x8_0000`
     - Only `.text` section.
 - `main.rs`: Important [inner attributes]:
     - `#![no_std]`, `#![no_main]`
-- `cpu.S`: Assembly `_start()` function that executes `wfe` (Wait For Event), halting all cores that
-  are executing `_start()`.
-- We (have to) define a `#[panic_handler]` function.
-    - Just waits infinitely for a cpu event.
+- `boot.s`: Assembly `_start()` function that executes `wfe` (Wait For Event), halting all cores
+  that are executing `_start()`.
+- We (have to) define a `#[panic_handler]` function to make the compiler happy.
+    - Make it `unimplemented!()` because it will be stripped out since it is not used.
 
 [inner attributes]: https://doc.rust-lang.org/reference/attributes.html
 
 ### Test it
 
 In the project folder, invoke QEMU and observe the CPU core spinning on `wfe`:
+
 ```console
 $ make qemu
 [...]

@@ -4,7 +4,7 @@
 
 <br/>
 
-<img src="doc/header.jpg" height="379"> <img src="doc/minipush_demo_frontpage.gif" height="379">
+<img src="doc/header.jpg" height="372"> <img src="doc/minipush_demo_frontpage.gif" height="372">
 
 ## ℹ️ Introduction
 
@@ -18,14 +18,13 @@ Have fun!
 
 _Best regards,<br>Andre ([@andre-richter])_
 
-P.S.: In the future, Chinese :cn: versions of the tutorials will be maintained as
-[`README.CN.md`](README.CN.md) by [@colachg] and [@readlnh].
+P.S.: For other languages, please look out for alternative README files. For example,
+[`README.CN.md`](README.CN.md) or [`README.ES.md`](README.ES.md). Many thanks to our
+[translators](#translations-of-this-repository) 🙌.
 
 [ARMv8-A architecture]: https://developer.arm.com/products/architecture/cpu-architecture/a-profile/docs
 [monolithic]: https://en.wikipedia.org/wiki/Monolithic_kernel
 [@andre-richter]: https://github.com/andre-richter
-[@colachg]: https://github.com/colachg
-[@readlnh]: https://github.com/readlnh
 
 ## 📑 Organization
 
@@ -40,7 +39,7 @@ P.S.: In the future, Chinese :cn: versions of the tutorials will be maintained a
 - The code written in these tutorials supports and runs on the **Raspberry Pi 3** and the
   **Raspberry Pi 4**.
   - Tutorials 1 till 5 are groundwork code which only makes sense to run in `QEMU`.
-  - Starting with [tutorial 6](06_drivers_gpio_uart), you can load and run the kernel on the real
+  - Starting with [tutorial 5](05_drivers_gpio_uart), you can load and run the kernel on the real
     Raspberrys and observe output over `UART`.
 - Although the Raspberry Pi 3 and 4 are the main target boards, the code is written in a modular
   fashion which allows for easy porting to other CPU architectures and/or boards.
@@ -58,55 +57,54 @@ P.S.: In the future, Chinese :cn: versions of the tutorials will be maintained a
 
 ## 🛠 System Requirements
 
-The tutorials are primarily targeted at **Linux**-based distributions. Most stuff will also work on
-other Unix flavors such as **macOS**, but this is only _experimental_.
+The tutorials are primarily targeted at **Linux**-based distributions. Most stuff will also work on **macOS**, but this is only _experimental_.
 
 ### 🚀 The tl;dr Version
 
-1. [Install Docker][install_docker].
-1. Ensure your user account is in the [docker group].
-1. Install a suitable `Rust` toolchain:
+1. [Install Docker Engine][install_docker].
+1. (**Linux only**) Ensure your user account is in the [docker group].
+1. Prepare the `Rust` toolchain. Most of it will be handled on first use through the
+   [rust-toolchain.toml](rust-toolchain.toml) file. What's left for us to do is:
    1. If you already have a version of Rust installed:
       ```bash
-      rustup toolchain add nightly-2020-06-30
-      rustup default nightly-2020-06-30
-      rustup component add llvm-tools-preview
-      rustup target add aarch64-unknown-none-softfloat
-      cargo install cargo-binutils
+      cargo install cargo-binutils rustfilt
       ```
 
-   2. If you need a fresh install:
+   1. If you need to install Rust from scratch:
       ```bash
-      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- \
-          --default-toolchain nightly-2020-06-30                           \
-          --component llvm-tools-preview
+      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
       source $HOME/.cargo/env
-      rustup target add aarch64-unknown-none-softfloat
-      cargo install cargo-binutils
+      cargo install cargo-binutils rustfilt
       ```
 
-3. In case you use `Visual Studio Code`, I strongly recommend installing the [Rust Analyzer extension].
-4. If you are **NOT** running Linux, some `Ruby` gems are needed as well:
+1. In case you use `Visual Studio Code`, I strongly recommend installing the [Rust Analyzer extension].
+1. (**macOS only**) Install a few `Ruby` gems.
+
+  This was last tested by the author with Ruby version `3.0.2` on `macOS Monterey`. If you are using
+  `rbenv`, the respective `.ruby-version` file is already in place. If you never heard of `rbenv`,
+  try using [this little guide](https://stackoverflow.com/a/68118750).
+
+   Run this in the repository root folder:
 
    ```bash
-   sudo gem install bundler
-   bundle config set path '.vendor/bundle'
+   bundle config set --local path '.vendor/bundle'
+   bundle config set --local without 'development'
    bundle install
    ```
 
 [docker group]: https://docs.docker.com/engine/install/linux-postinstall/
 [Rust Analyzer extension]: https://marketplace.visualstudio.com/items?itemName=matklad.rust-analyzer
 
-### 🧰 The Long Version: Eliminating Toolchain Hassle
+### 🧰 More Details: Eliminating Toolchain Hassle
 
 This series tries to put a strong focus on user friendliness. Therefore, efforts were made to
-eliminate the biggest painpoint in embedded development as much as possible: Toolchain hassle.
+eliminate the biggest painpoint in embedded development as much as possible: `Toolchain hassle`.
 
 Rust itself is already helping a lot in that regard, because it has built-in support for
 cross-compilation. All that we need for cross-compiling from an `x86` host to the Raspberry Pi's
-`AArch64` architecture is to install the respective target through `rustup`. However, besides the
-Rust compiler, we will use some more tools. Among others:
+`AArch64` architecture will be automatically installed by `rustup`. However, besides the Rust
+compiler, we will use some more tools. Among others:
 
 - `QEMU` to emulate our kernel on the host system.
 - A self-made tool called `Minipush` to load a kernel onto the Raspberry Pi on-demand over `UART`.
@@ -121,19 +119,19 @@ accompanying container that has all the needed tools or dependencies pre-install
 pulled in automagically once it is needed. If you want to know more about Docker and peek at the
 provided container, please refer to the repository's [docker](docker) folder.
 
-[install_docker]: https://docs.docker.com/get-docker/
+[install_docker]: https://docs.docker.com/engine/install/#server
 
 ## 📟 USB Serial Output
 
 Since the kernel developed in the tutorials runs on the real hardware, it is highly recommended to
-get a USB serial debug cable to get the full experience. The cable also powers the Raspberry once
-you connect it, so you don't need extra power over the dedicated power-USB.
+get a USB serial cable to get the full experience.
 
-- You can find USB-to-serial cables that should work right away at [\[1\]] [\[2\]].
-- You connect it to the GPIO pins `14/15` as shown below.
-- [Tutorial 6](06_drivers_gpio_uart) is the first where you can use it. Check it out for
+- You can find USB-to-serial cables that should work right away at [\[1\]] [\[2\]], but many others
+  will work too. Ideally, your cable is based on the `CP2102` chip.
+- You connect it to `GND` and GPIO pins `14/15` as shown below.
+- [Tutorial 5](05_drivers_gpio_uart) is the first where you can use it. Check it out for
   instructions on how to prepare the SD card to boot your self-made kernel from it.
-- Starting with [tutorial 7](07_uart_chainloader), booting kernels on your Raspberry is getting
+- Starting with [tutorial 6](06_uart_chainloader), booting kernels on your Raspberry is getting
   _really_ comfortable. In this tutorial, a so-called `chainloader` is developed, which will be the
   last file you need to manually copy on the SD card for a while. It will enable you to load the
   tutorial kernels during boot on demand over `UART`.
@@ -148,6 +146,19 @@ you connect it, so you don't need extra power over the dedicated power-USB.
 The original version of the tutorials started out as a fork of [Zoltan
 Baldaszti](https://github.com/bztsrc)'s awesome [tutorials on bare metal programming on
 RPi3](https://github.com/bztsrc/raspi3-tutorial) in `C`. Thanks for giving me a head start!
+
+### Translations of this repository
+
+ - **Chinese**
+   - [@colachg] and [@readlnh].
+   - Need updating.
+ - **Spanish**
+   -  [@zanezhub].
+   -  In the future there'll be tutorials translated to spanish.
+
+[@colachg]: https://github.com/colachg
+[@readlnh]: https://github.com/readlnh
+[@zanezhub]: https://github.com/zanezhub
 
 ## License
 

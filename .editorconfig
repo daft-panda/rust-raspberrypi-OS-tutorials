@@ -8,11 +8,12 @@ end_of_line = lf
 insert_final_newline = true
 indent_style = space
 trim_trailing_whitespace = true
+max_line_length = 100
 
 [Dockerfile]
 indent_size = 4
 
-[Makefile]
+[{Makefile,*.mk}]
 indent_style = tab
 indent_size = 8
 
@@ -22,8 +23,9 @@ indent_size = 4
 [*.rs]
 indent_size = 4
 
-[*.S]
-indent_size = 4
+[*.s]
+indent_style = tab
+indent_size = 8
 
 [*.sh]
 indent_size = 4

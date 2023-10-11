@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// Copyright (c) 2018-2020 Andre Richter <andre.o.richter@gmail.com>
+// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
 
 // Rust embedded logo for `make doc`.
-#![doc(html_logo_url = "https://git.io/JeGIp")]
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/rust-embedded/wg/master/assets/logo/ewg-logo-blue-white-on-transparent.png"
+)]
 
 //! The `kernel` binary.
 //!
@@ -20,15 +22,22 @@
 //! `src/_arch`, for example, `src/_arch/aarch64`.
 //!
 //! The architecture folders mirror the subsystem modules laid out in `src`. For example,
-//! architectural code that belongs to the `kernel`'s memory subsystem (`src/memory.rs`) would go
-//! into `src/_arch/aarch64/memory.rs`. The latter file is directly included and re-exported in
-//! `src/memory.rs`, so that the architectural code parts are transparent with respect to the code's
-//! module organization. That means a public function `foo()` defined in
-//! `src/_arch/aarch64/memory.rs` would be reachable as `crate::memory::foo()` only.
+//! architectural code that belongs to the `kernel`'s MMU subsystem (`src/memory/mmu.rs`) would go
+//! into `src/_arch/aarch64/memory/mmu.rs`. The latter file is loaded as a module in
+//! `src/memory/mmu.rs` using the `path attribute`. Usually, the chosen module name is the generic
+//! module's name prefixed with `arch_`.
 //!
-//! The `_` in `_arch` denotes that this folder is not part of the standard module hierarchy.
-//! Rather, it's contents are conditionally pulled into respective files using the `#[path =
-//! "_arch/xxx/yyy.rs"]` attribute.
+//! For example, this is the top of `src/memory/mmu.rs`:
+//!
+//! ```
+//! #[cfg(target_arch = "aarch64")]
+//! #[path = "../_arch/aarch64/memory/mmu.rs"]
+//! mod arch_mmu;
+//! ```
+//!
+//! Often times, items from the `arch_ module` will be publicly reexported by the parent module.
+//! This way, each architecture specific module can provide its implementation of an item, while the
+//! caller must not be concerned which architecture has been conditionally compiled.
 //!
 //! ## BSP code
 //!
@@ -37,9 +46,8 @@
 //! or instances of drivers for devices that are featured on the respective board.
 //!
 //! Just like processor architecture code, the `BSP` code's module structure tries to mirror the
-//! `kernel`'s subsystem modules, but there is no transparent re-exporting this time. That means
-//! whatever is provided must be called starting from the `bsp` namespace, e.g.
-//! `bsp::driver::driver_manager()`.
+//! `kernel`'s subsystem modules, but there is no reexporting this time. That means whatever is
+//! provided must be called starting from the `bsp` namespace, e.g. `bsp::driver::driver_manager()`.
 //!
 //! ## Kernel interfaces
 //!
@@ -91,24 +99,24 @@
 //!
 //! - `crate::memory::*`
 //! - `crate::bsp::memory::*`
+//!
+//! # Boot flow
+//!
+//! 1. The kernel's entry point is the function `cpu::boot::arch_boot::_start()`.
+//!     - It is implemented in `src/_arch/__arch_name__/cpu/boot.s`.
+//! 2. Once finished with architectural setup, the arch code calls `kernel_init()`.
 
-#![feature(asm)]
+#![feature(asm_const)]
 #![feature(format_args_nl)]
-#![feature(global_asm)]
 #![feature(panic_info_message)]
 #![no_main]
 #![no_std]
 
-// `mod cpu` provides the `_start()` function, the first function to run. `_start()` then calls
-// `runtime_init()`, which jumps to `kernel_init()`.
-
 mod bsp;
 mod console;
 mod cpu;
-mod memory;
 mod panic_wait;
 mod print;
-mod runtime_init;
 
 /// Early init code.
 ///
@@ -116,7 +124,7 @@ mod runtime_init;
 ///
 /// - Only a single core must be active and running this function.
 unsafe fn kernel_init() -> ! {
-    println!("[0] Hello from Rust!");
+    println!("Hello from Rust!");
 
     panic!("Stopping here.")
 }

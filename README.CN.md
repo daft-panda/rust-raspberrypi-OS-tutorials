@@ -8,7 +8,7 @@
 
 ## ℹ️ 介绍
 
-该系列教程适用于 ARM64 位[ARMv8-A 架构]的业余操系统开发者。该教程会从零开始，一步步地指导你如何开发一个[功能健全的]
+该系列教程适用于 ARM64 位[ARMv8-A 架构]的业余操作系统开发者。该教程会从零开始，一步步地指导你如何开发一个[功能健全的]
 嵌入式操作系统的内核。包含了实现一般操作系统的任务，例如开发串口控制台，设置虚拟内存和处理硬件异常。
 同时利用 Rust 的特性来提供系统的安全和速度。
 
@@ -25,7 +25,7 @@ _带上我最诚挚的问候,<br>Andre ([@andre-richter])_
 - 每篇教程都包含一个独立可引导的二进制内核文件。
 - 每篇新的教程都在之前的基础上扩展。
 - 每篇教程的指南里面都有一个简短的章节来总结新增的代码和功能，也会展示源代码的区别，方便检查和同步。
-- 部分教程中有除了`tl;dr`章节外还有非常详细、具体的介绍。长期计划是所有的教程都会有详细的文字说明。但是现在我认为教程独特的地方是`tl;dr`和`diff`还不够详细。
+- 部分教程中有除了`tl;dr`章节外还有非常详细、具体的介绍。长期计划是所有的教程都会有详细的文字说明。但是目前只有那些我认为教程的`tl;dr`和`diff`还不够详细的章节会详细说明。
 - 教程中所用的代码可以在**树莓派 3 和 4**上运行。
   - 教程的第一到五章是基础内容，只能运行在`QEMU`上。
   - 到了[第六章]时(06_drivers_gpio_uart)，你可以在树莓派上加载和运行内核并通过`UART`来观察输出结果。
@@ -52,26 +52,19 @@ _带上我最诚挚的问候,<br>Andre ([@andre-richter])_
 3. 安装正确的`Rust`工具链:
    1. 如果你已经安装了一个版本的Rust:
       ```bash
-      rustup toolchain add nightly-2020-06-30
-      rustup default nightly-2020-06-30
-      rustup component add llvm-tools-preview
-      rustup target add aarch64-unknown-none-softfloat
-      cargo install cargo-binutils
+      cargo install cargo-binutils rustfilt
       ```
 
-   2. 如果你想要全新安装:
+   1. 如果你想要全新安装:
       ```bash
-      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- \
-          --default-toolchain nightly-2020-06-30                           \
-          --component llvm-tools-preview
+      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
       source $HOME/.cargo/env
-      rustup target add aarch64-unknown-none-softfloat
-      cargo install cargo-binutils
+      cargo install cargo-binutils rustfilt
       ```
 
-4. 如果你使用 `Visual Studio Code`，我强烈推荐你安装[Rust Analyzer 扩展]。
-5. 如果你使用的**不是**Linux，那么你还需要安装一些`Ruby` gems。
+1. 如果你使用 `Visual Studio Code`，我强烈推荐你安装[Rust Analyzer 扩展]。
+1. 如果你使用的**不是**Linux，那么你还需要安装一些`Ruby` gems。
 
 ```bash
 sudo gem install bundler
@@ -101,8 +94,7 @@ Rust内置的交叉编译支持在这方面帮了我们大忙。我们只需要�
 
 ## 📟 USB 串行输出
 
-由于教程中开发的内核是在真实的硬件上运行的，因此强烈建议您使用 USB 串行调试线来进行试验。连接后调试线会为树莓派供电，
-所以不需要额外供电。
+由于教程中开发的内核是在真实的硬件上运行的，因此强烈建议您使用 USB 串行调试线来进行试验。连接调试线后，树莓派需要通过额外电源供电。
 
 - 淘宝搜索"USB 转串口"
 - 如下图连接 GPIO 串口的 14/15 号引脚

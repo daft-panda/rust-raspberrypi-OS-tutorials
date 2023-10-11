@@ -3,7 +3,7 @@
 
 # SPDX-License-Identifier: MIT OR Apache-2.0
 #
-# Copyright (c) 2020 Andre Richter <andre.o.richter@gmail.com>
+# Copyright (c) 2020-2023 Andre Richter <andre.o.richter@gmail.com>
 
 require 'rubygems'
 require 'bundler/setup'
@@ -11,7 +11,7 @@ require 'colorize'
 require 'fileutils'
 require_relative 'devtool/copyright'
 
-# Actions for tutorial folders
+# Actions for tutorial folders.
 class TutorialCrate
     attr_reader :folder
 
@@ -26,69 +26,89 @@ class TutorialCrate
     def clean
         puts 'Cleaning '.light_blue + @folder
 
-        Dir.chdir(@folder) { system('make clean') }
+        # No output needed.
+        Dir.chdir(@folder) { `make clean` }
     end
 
     def update
+        puts "\n\n"
         puts 'Updating '.light_blue + @folder
 
         Dir.chdir(@folder) { system('cargo update') }
     end
 
     def clippy(bsp)
+        puts "\n\n"
         puts "Clippy #{@folder} - BSP: #{bsp}".light_blue
 
         Dir.chdir(@folder) { exit(1) unless system("BSP=#{bsp} make clippy") }
     end
 
-    def fmt(args)
-        print 'Format '.light_blue
-        print "#{args} ".light_blue unless args.nil?
-        puts @folder
-
+    def fmt_cargo_rust(args)
         Dir.chdir(@folder) { exit(1) unless system("cargo fmt #{args}") }
     end
 
     def make(bsp)
+        puts "\n\n"
         puts "Make #{@folder} - BSP: #{bsp}".light_blue
 
         Dir.chdir(@folder) { exit(1) unless system("BSP=#{bsp} make") }
     end
 
-    def test_unit
-        return unless testable?
+    def test(bsp)
+        return unless boot_test?
 
-        puts "Unit Tests #{@folder}".light_blue
+        puts "\n\n"
+        puts "Test #{@folder} - BSP: #{bsp}".light_blue
 
-        Dir.chdir(@folder) { exit(1) unless system('TEST=unit make test') }
+        Dir.chdir(@folder) { exit(1) unless system("BSP=#{bsp} make test") }
     end
 
-    def test_integration
-        return unless testable?
+    def test_boot(bsp)
+        return unless boot_test?
 
-        puts "Integration Tests #{@folder}".light_blue
+        puts "\n\n"
+        puts "Test Boot #{@folder} - BSP: #{bsp}".light_blue
 
-        Dir.chdir(@folder) do
-            Dir['tests/*.rs'].sort.each do |t|
-                t = t.delete_prefix('tests/').delete_suffix('.rs')
-                exit(1) unless system("TEST=#{t} make test")
-            end
-        end
+        Dir.chdir(@folder) { exit(1) unless system("BSP=#{bsp} make test_boot") }
+    end
+
+    def test_unit(bsp)
+        return unless unit_integration_tests?
+
+        puts "\n\n"
+        puts "Test Unit #{@folder} - BSP: #{bsp}".light_blue
+
+        Dir.chdir(@folder) { exit(1) unless system("BSP=#{bsp} make test_unit") }
+    end
+
+    def test_integration(bsp)
+        return unless unit_integration_tests?
+
+        puts "\n\n"
+        puts "Test Integration #{@folder} - BSP: #{bsp}".light_blue
+
+        Dir.chdir(@folder) { exit(1) unless system("BSP=#{bsp} make test_integration") }
     end
 
     private
 
-    def testable?
-        Dir.exist?(@folder + '/tests')
+    def boot_test?
+        Dir.exist?("#{@folder}/tests") || Dir.exist?("#{@folder}/kernel/tests")
+    end
+
+    def unit_integration_tests?
+        !Dir.glob("#{@folder}/kernel/tests/00_*.rs").empty?
     end
 end
 
-# Forks commands to all applicable receivers
+# Forks commands to all applicable receivers.
 class DevTool
     def initialize
+        @user_has_supplied_crates = false
         @bsp = bsp_from_env || SUPPORTED_BSPS.first
 
-        cl = user_supplied_crate_list || Dir['*/Cargo.toml'].sort
+        cl = user_supplied_crate_list || Dir['*/Cargo.toml']
         @crates = cl.map { |c| TutorialCrate.new(c.delete_suffix('/Cargo.toml')) }
     end
 
@@ -103,11 +123,7 @@ class DevTool
     def clippy(bsp = nil)
         bsp ||= @bsp
 
-        @crates.each do |c|
-            c.clippy(bsp)
-            puts
-            puts
-        end
+        @crates.each { |c| c.clippy(bsp) }
     end
 
     def diff
@@ -120,39 +136,55 @@ class DevTool
         end
     end
 
-    def fmt(check = false)
-        args = '-- --check' if check
-
-        @crates.each { |c| c.fmt(args) }
+    def fmt
+        fmt_cargo_rust(check: false)
+        puts
+        fmt_prettier(check: false)
     end
 
     def fmt_check
-        fmt(true)
+        fmt_cargo_rust(check: true)
+        puts
+        fmt_prettier(check: true)
     end
 
     def make(bsp = nil)
         bsp ||= @bsp
 
-        @crates.each do |c|
-            c.make(bsp)
-            puts
-            puts
-        end
+        @crates.each { |c| c.make(bsp) }
     end
 
     def make_xtra
         return if @user_has_supplied_crates
 
-        puts 'Make Xtra crates'.light_blue
+        puts "\n\n"
+        puts 'Make Xtra stuff'.light_blue
+        system('cd *_uart_chainloader && bash update.sh')
         system('cd X1_JTAG_boot && bash update.sh')
     end
 
-    def test_unit
-        @crates.each(&:test_unit)
+    def test(bsp = nil)
+        bsp ||= @bsp
+
+        @crates.each { |c| c.test(bsp) }
     end
 
-    def test_integration
-        @crates.each(&:test_integration)
+    def test_boot(bsp = nil)
+        bsp ||= @bsp
+
+        @crates.each { |c| c.test_boot(bsp) }
+    end
+
+    def test_unit(bsp = nil)
+        bsp ||= @bsp
+
+        @crates.each { |c| c.test_unit(bsp) }
+    end
+
+    def test_integration(bsp = nil)
+        bsp ||= @bsp
+
+        @crates.each { |c| c.test_integration(bsp) }
     end
 
     def copyright
@@ -161,39 +193,38 @@ class DevTool
 
     def misspell
         puts 'Misspell'.light_blue
-        exit(1) unless system("~/bin/misspell -error #{tracked_files.join(' ')}")
+
+        translations = ['README.CN.md', 'README.ES.md']
+        files = tracked_files.reject { |f| translations.include?(File.basename(f)) }
+        files = files.join(' ')
+
+        exit(1) unless system(".vendor/misspell -error #{files}")
     end
 
     def rubocop
         puts 'Rubocop'.light_blue
-        exit(1) unless system('rubocop')
-    end
-
-    def ready_for_publish
-        clean
-        fmt
-        misspell
-        rubocop
-        clippy('rpi4')
-        clippy('rpi3')
-        copyright
-
-        clean
-        make('rpi4')
-        make('rpi3')
-        make_xtra
-        test_unit
-        test_integration
-        diff
-        clean
+        exit(1) unless system('bundle exec rubocop')
     end
 
     def ready_for_publish_no_rust
         clean
-        misspell
+        fmt
         rubocop
         copyright
         diff
+        misspell
+        clean
+    end
+
+    def ready_for_publish
+        ready_for_publish_no_rust
+
+        make_xtra
+        clippy('rpi4')
+        clippy('rpi3')
+        test_boot('rpi3')
+        test_unit('rpi3')
+        test_integration('rpi3')
         clean
     end
 
@@ -202,11 +233,41 @@ class DevTool
     SUPPORTED_BSPS = %w[rpi3 rpi4].freeze
 
     def bsp_from_env
-        bsp = ENV['BSP']
+        bsp = ENV.fetch('BSP', nil)
 
         return bsp if SUPPORTED_BSPS.include?(bsp)
 
         nil
+    end
+
+    def fmt_cargo_rust(check: false)
+        args = '-- --check' if check
+
+        @crates.each do |c|
+            print 'Rust cargo fmt '.light_blue
+            print "#{args} ".light_blue unless args.nil?
+            puts c.folder
+
+            Process.fork { c.fmt_cargo_rust(args) }
+        end
+        Process.waitall
+    end
+
+    def fmt_prettier(check: false)
+        args = if check
+                   '--check'
+               else
+                   '--write'
+               end
+
+        args += if @user_has_supplied_crates
+                    " #{@crates.map(&:folder).join(' ')}"
+                else
+                    ' .'
+                end
+
+        puts 'Prettier:'.light_blue
+        exit(1) unless system("./node_modules/.bin/prettier #{args}")
     end
 
     def user_supplied_crate_list
@@ -214,7 +275,7 @@ class DevTool
 
         return nil if folders.empty?
 
-        crates = folders.map { |d| d + '/Cargo.toml' }.sort
+        crates = folders.map { |d| "#{d}/Cargo.toml" }.sort
         crates.each do |c|
             unless File.exist?(c)
                 puts "Crate not found: #{c}"
@@ -240,17 +301,26 @@ class DevTool
         # Only diff adjacent tutorials. This checks the numbers of the tutorial folders.
         return unless original[0..1].to_i + 1 == update[0..1].to_i
 
-        puts 'Diffing '.light_blue + original.ljust(padding) + " -> #{update}"
+        # Skip for tutorial 11. Due to the change to virtual manifest, the diff is rather
+        # unreadable.
+        if original[0..1].to_i == 11
+            puts 'Skipping '.light_yellow +
+                 "#{original}: Too noisy due to change to virtual manifest"
+            return
+        end
+
+        puts 'Diffing  '.light_blue + original.ljust(padding) + " -> #{update}"
         system("bash utils/diff_tut_folders.bash #{original} #{update}")
     end
 
     def copyright_source_files
         extensions = ['.S', '.rs', '.rb']
 
-        # Note: The selection result is the return value of the function.
+        # NOTE: The selection result is the return value of the function.
         tracked_files.select do |f|
             next unless File.exist?(f)
             next if f.include?('build.rs')
+            next if f.include?('boot_test_string.rb')
 
             f.include?('Makefile') ||
                 f.include?('Dockerfile') ||
@@ -259,18 +329,19 @@ class DevTool
     end
 end
 
-##--------------------------------------------------------------------------------------------------
+## -------------------------------------------------------------------------------------------------
 ## Execution starts here
-##--------------------------------------------------------------------------------------------------
+## -------------------------------------------------------------------------------------------------
 tool = DevTool.new
 cmd = ARGV[0]
 commands = tool.public_methods(false).sort
 
-if !commands.include?(cmd&.to_sym)
+if commands.include?(cmd&.to_sym)
+    tool.public_send(cmd)
+else
     puts "Usage: ./#{__FILE__.split('/').last} COMMAND [optional list of folders]"
     puts
     puts 'Commands:'
     commands.each { |m| puts "  #{m}" }
-else
-    tool.public_send(cmd)
+    exit(1)
 end
